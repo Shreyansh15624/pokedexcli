@@ -7,27 +7,24 @@ import (
 )
 
 func main() {
-	cliCommand := map[string]cliCommand{
-		"exit": {
-			name:        "exit",
-			description: "Exit the Pokedex",
-			callback:    commandExit,
-		},
-		"help": {
-			name:        "help",
-			description: "Displays a help message",
-			callback:    commandHelp,
-		},
-		"empty": {
-			name:        "empty",
-			description: "Singifies an empty input",
-			callback:    commandHelp,
+	config := config{
+		commandsMap: map[string]cliCommand{
+			"exit": {
+				name:        "exit",
+				description: "Exit the Pokedex",
+				callback:    commandExit,
+			},
+			"help": {
+				name:        "help",
+				description: "Displays a help message",
+				callback:    commandHelp,
+			},
 		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
+	fmt.Println("Welcome to PokeDex!")
 	for {
-		fmt.Println("Welcome to PokeDex!")
 		fmt.Print("Pokedex > ")
 		scanner.Scan()
 		userInputString := scanner.Text()
@@ -36,11 +33,11 @@ func main() {
 			continue
 		}
 		userInput := cleanedString[0]
-		command, exists := cliCommand[userInput]
+		command, exists := config.commandsMap[userInput]
 		if exists {
-			err := command.callback()
+			err := command.callback(&config)
 			if err != nil {
-				fmt.Println("%v", err)
+				fmt.Printf("%v", err)
 			}
 			// fmt.Println(out)
 		} else {
