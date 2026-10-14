@@ -19,6 +19,16 @@ func main() {
 				description: "Displays a help message",
 				callback:    commandHelp,
 			},
+			"map": {
+				name:        "map",
+				description: "Displays each 20 next location areas in the pokemon world for each subsequent call",
+				callback:    commandMapf,
+			},
+			"mapb": {
+				name:        "mapb",
+				description: "Dispalys each 20 previous location areas in the pokemon world for each subsequent call",
+				callback:    commandMapb,
+			},
 		},
 	}
 
