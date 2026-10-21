@@ -1,3 +1,3 @@
-module github.com/Shreyansh15624/pokedexcli
+module pokedexcli
 
 go 1.27.1

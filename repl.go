@@ -7,10 +7,12 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"pokedexcli/internal/pokecache"
 	"strings"
 )
 
 type config struct {
+	cache       *pokecache.Cache
 	commandsMap map[string]cliCommand
 	next        *string
 	prev        *string
@@ -60,22 +62,28 @@ func commandMapf(c *config) error {
 	} else {
 		baseUrl = *c.next
 	}
-	response, err := http.Get(baseUrl)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	if response.StatusCode > 299 {
-		err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, response.Body)
-		return errors.New(err)
+
+	cachedData, ok := c.cache.Get(baseUrl)
+	if !ok {
+		response, err := http.Get(baseUrl)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+		if response.StatusCode > 299 {
+			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, response.Body)
+			return errors.New(err)
+		}
+		cachedData, err = io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+
+		c.cache.Add(baseUrl, cachedData)
 	}
 
 	var results returnedJSON
-	body, err := io.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(body, &results)
+	err := json.Unmarshal(cachedData, &results)
 	if err != nil {
 		return err
 	}
@@ -85,6 +93,7 @@ func commandMapf(c *config) error {
 	for _, location := range results.Results {
 		fmt.Println(location.Name)
 	}
+
 	return nil
 }
 
@@ -97,22 +106,31 @@ func commandMapb(c *config) error {
 	} else {
 		baseUrl = *c.prev
 	}
-	response, err := http.Get(baseUrl)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-	body, err := io.ReadAll(response.Body)
-	if response.StatusCode > 299 {
-		err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, body)
-		return errors.New(err)
+
+	cachedData, ok := c.cache.Get(baseUrl)
+	if !ok {
+		response, err := http.Get(baseUrl)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+
+		cachedData, err = io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+
+		if response.StatusCode > 299 {
+			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cachedData)
+			return errors.New(err)
+		}
+
+		c.cache.Add(baseUrl, cachedData)
 	}
 
 	var results returnedJSON
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(body, &results)
+
+	err := json.Unmarshal(cachedData, &results)
 	if err != nil {
 		return err
 	}

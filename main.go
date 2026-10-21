@@ -4,10 +4,14 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"pokedexcli/internal/pokecache"
+	"time"
 )
 
 func main() {
+	const interval = 10 * time.Second
 	config := config{
+		cache: pokecache.NewCache(interval),
 		commandsMap: map[string]cliCommand{
 			"exit": {
 				name:        "exit",
