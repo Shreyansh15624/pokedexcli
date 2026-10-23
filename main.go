@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	const interval = 10 * time.Second
+	const interval = 20 * time.Second
 	config := config{
 		cache: pokecache.NewCache(interval),
 		commandsMap: map[string]cliCommand{
@@ -33,10 +33,18 @@ func main() {
 				description: "Dispalys each 20 previous location areas in the pokemon world for each subsequent call",
 				callback:    commandMapb,
 			},
+			"explore": {
+				name:        "explore",
+				description: "Display the names of all Pokémon found in that area",
+				callback:    localPokemonEncounter,
+			},
 		},
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
+	if err := scanner.Err(); err != nil {
+		fmt.Fprintln(os.Stderr)
+	}
 	fmt.Println("Welcome to PokeDex!")
 	for {
 		fmt.Print("Pokedex > ")
@@ -47,13 +55,18 @@ func main() {
 			continue
 		}
 		userInput := cleanedString[0]
+		var areaInput string
+		if len(cleanedString) > 1 {
+			areaInput = cleanedString[1]
+		} else {
+			areaInput = ""
+		}
 		command, exists := config.commandsMap[userInput]
 		if exists {
-			err := command.callback(&config)
+			err := command.callback(&config, areaInput)
 			if err != nil {
 				fmt.Printf("%v", err)
 			}
-			// fmt.Println(out)
 		} else {
 			fmt.Println("unknown command")
 		}
