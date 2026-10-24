@@ -38,7 +38,13 @@ func main() {
 				description: "Display the names of all Pokémon found in that area",
 				callback:    localPokemonEncounter,
 			},
+			"catch": {
+				name:        "catch",
+				description: "Catching a specific pokemon found in the current local area",
+				callback:    catchThatPokemon,
+			},
 		},
+		pokemon: make(map[string]Pokemon),
 	}
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -54,16 +60,16 @@ func main() {
 		if len(cleanedString) == 0 {
 			continue
 		}
-		userInput := cleanedString[0]
-		var areaInput string
+		userInput1 := cleanedString[0]
+		var userInput2 string
 		if len(cleanedString) > 1 {
-			areaInput = cleanedString[1]
+			userInput2 = cleanedString[1]
 		} else {
-			areaInput = ""
+			userInput2 = ""
 		}
-		command, exists := config.commandsMap[userInput]
+		command, exists := config.commandsMap[userInput1]
 		if exists {
-			err := command.callback(&config, areaInput)
+			err := command.callback(&config, userInput2)
 			if err != nil {
 				fmt.Printf("%v", err)
 			}

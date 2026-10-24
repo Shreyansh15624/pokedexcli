@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math/rand/v2"
 	"net/http"
 	"os"
 	"pokedexcli/internal/pokecache"
@@ -14,6 +15,7 @@ import (
 type config struct {
 	cache       *pokecache.Cache
 	commandsMap map[string]cliCommand
+	pokemon     map[string]Pokemon
 	next        *string
 	prev        *string
 }
@@ -49,6 +51,20 @@ type pokemonInfo struct {
 	Name string `json:"name"`
 }
 
+type Pokemon struct {
+	Name           string  `json:"name"`
+	BaseExperience int     `json:"base_experience"`
+	ID             int     `json:"id"`
+	Height         int     `json:"height"`
+	Weight         int     `json:"weight"`
+	HeldItems      []Items `json:"held_items"`
+}
+
+type Items struct {
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
+
 func cleanInput(text string) []string {
 	return strings.Fields(strings.ToLower(text))
 }
@@ -76,7 +92,7 @@ func commandMapf(c *config, area string) error {
 		baseUrl = *c.next
 	}
 
-	cachedData, ok := c.cache.Get(baseUrl)
+	cacheData, ok := c.cache.Get(baseUrl)
 	if !ok {
 		response, err := http.Get(baseUrl)
 		if err != nil {
@@ -87,16 +103,16 @@ func commandMapf(c *config, area string) error {
 			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, response.Body)
 			return errors.New(err)
 		}
-		cachedData, err = io.ReadAll(response.Body)
+		cacheData, err = io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
 
-		c.cache.Add(baseUrl, cachedData)
+		c.cache.Add(baseUrl, cacheData)
 	}
 
 	var results returnedJSON
-	err := json.Unmarshal(cachedData, &results)
+	err := json.Unmarshal(cacheData, &results)
 	if err != nil {
 		return err
 	}
@@ -120,7 +136,7 @@ func commandMapb(c *config, area string) error {
 		baseUrl = *c.prev
 	}
 
-	cachedData, ok := c.cache.Get(baseUrl)
+	cacheData, ok := c.cache.Get(baseUrl)
 	if !ok {
 		response, err := http.Get(baseUrl)
 		if err != nil {
@@ -128,22 +144,22 @@ func commandMapb(c *config, area string) error {
 		}
 		defer response.Body.Close()
 
-		cachedData, err = io.ReadAll(response.Body)
+		cacheData, err = io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
 
 		if response.StatusCode > 299 {
-			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cachedData)
+			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cacheData)
 			return errors.New(err)
 		}
 
-		c.cache.Add(baseUrl, cachedData)
+		c.cache.Add(baseUrl, cacheData)
 	}
 
 	var results returnedJSON
 
-	err := json.Unmarshal(cachedData, &results)
+	err := json.Unmarshal(cacheData, &results)
 	if err != nil {
 		return err
 	}
@@ -164,7 +180,7 @@ func localPokemonEncounter(c *config, area string) error {
 
 	baseUrl := "https://pokeapi.co/api/v2/location-area/" + area + "/"
 
-	cachedData, ok := c.cache.Get(baseUrl)
+	cacheData, ok := c.cache.Get(baseUrl)
 	if !ok {
 		response, err := http.Get(baseUrl)
 		if err != nil {
@@ -172,22 +188,22 @@ func localPokemonEncounter(c *config, area string) error {
 		}
 		defer response.Body.Close()
 
-		cachedData, err = io.ReadAll(response.Body)
+		cacheData, err = io.ReadAll(response.Body)
 		if err != nil {
 			return err
 		}
 
 		if response.StatusCode > 299 {
-			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cachedData)
+			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cacheData)
 			return errors.New(err)
 		}
 
-		c.cache.Add(baseUrl, cachedData)
+		c.cache.Add(baseUrl, cacheData)
 	}
 
 	var pokemon_encounters locationAreaDetail
 
-	err := json.Unmarshal(cachedData, &pokemon_encounters)
+	err := json.Unmarshal(cacheData, &pokemon_encounters)
 	if err != nil {
 		return err
 	}
@@ -196,6 +212,53 @@ func localPokemonEncounter(c *config, area string) error {
 	fmt.Println("Found Pokemon:")
 	for _, pokemon := range pokemon_encounters.PokemonEncounters {
 		fmt.Println("-", pokemon.Pokemon.Name)
+	}
+
+	return nil
+}
+
+func catchThatPokemon(c *config, pokemon string) error {
+	if pokemon == "" {
+		fmt.Println("Please, specify the pokemon you want to catch...")
+		return nil
+	}
+
+	baseUrl := "https://pokeapi.co/api/v2/pokemon/" + pokemon + "/"
+	cacheData, ok := c.cache.Get(baseUrl)
+	if !ok {
+		response, err := http.Get(baseUrl)
+		if err != nil {
+			return err
+		}
+		defer response.Body.Close()
+
+		cacheData, err = io.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+
+		if response.StatusCode > 299 {
+			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cacheData)
+			return errors.New(err)
+		}
+		c.cache.Add(baseUrl, cacheData)
+	}
+
+	var targetPokemon Pokemon
+
+	err := json.Unmarshal(cacheData, &targetPokemon)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("Throwing a Pokeball at " + pokemon + "...")
+
+	catchPossibility := rand.IntN(200)
+	if targetPokemon.BaseExperience > catchPossibility {
+		c.pokemon[pokemon] = targetPokemon
+		fmt.Println(pokemon + " was caught!")
+	} else {
+		fmt.Println(pokemon + " escaped!")
 	}
 
 	return nil
