@@ -302,3 +302,11 @@ func inspectPokemon(c *config, pokemon string) error {
 
 	return nil
 }
+
+func pokedex(c *config, pokemon string) error {
+	fmt.Println("Your Pokedex:")
+	for name := range c.pokemon {
+		fmt.Println(" - " + name)
+	}
+	return nil
+}

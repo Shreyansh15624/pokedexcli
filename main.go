@@ -45,8 +45,13 @@ func main() {
 			},
 			"inspect": {
 				name:        "inspect",
-				description: "Check the list of all the pokemon you have caught",
+				description: "Check the details of the specific pokemon you have caught with its name",
 				callback:    inspectPokemon,
+			},
+			"pokedex": {
+				name:        "pokedex",
+				description: "Displays all the pokemon you have caught",
+				callback:    pokedex,
 			},
 		},
 		pokemon: make(map[string]Pokemon),
