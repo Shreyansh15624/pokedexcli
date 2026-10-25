@@ -43,6 +43,11 @@ func main() {
 				description: "Catching a specific pokemon found in the current local area",
 				callback:    catchThatPokemon,
 			},
+			"inspect": {
+				name:        "inspect",
+				description: "Check the list of all the pokemon you have caught",
+				callback:    inspectPokemon,
+			},
 		},
 		pokemon: make(map[string]Pokemon),
 	}

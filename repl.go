@@ -52,17 +52,26 @@ type pokemonInfo struct {
 }
 
 type Pokemon struct {
-	Name           string  `json:"name"`
-	BaseExperience int     `json:"base_experience"`
-	ID             int     `json:"id"`
-	Height         int     `json:"height"`
-	Weight         int     `json:"weight"`
-	HeldItems      []Items `json:"held_items"`
-}
-
-type Items struct {
-	Name string `json:"name"`
-	Url  string `json:"url"`
+	ID             int    `json:"id"`
+	Name           string `json:"name"`
+	BaseExperience int    `json:"base_experience"`
+	Height         int    `json:"height"`
+	Weight         int    `json:"weight"`
+	Stats          []struct {
+		BaseStat int `json:"base_stat"`
+		Effort   int `json:"effort"`
+		Stat     struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"stat"`
+	} `json:"stats"`
+	Types []struct {
+		Slot int `json:"slot"`
+		Type struct {
+			Name string `json:"name"`
+			URL  string `json:"url"`
+		} `json:"type"`
+	} `json:"types"`
 }
 
 func cleanInput(text string) []string {
@@ -224,7 +233,7 @@ func catchThatPokemon(c *config, pokemon string) error {
 	}
 
 	baseUrl := "https://pokeapi.co/api/v2/pokemon/" + pokemon + "/"
-	cacheData, ok := c.cache.Get(baseUrl)
+	cacheData, ok := c.cache.Get(pokemon)
 	if !ok {
 		response, err := http.Get(baseUrl)
 		if err != nil {
@@ -241,7 +250,7 @@ func catchThatPokemon(c *config, pokemon string) error {
 			err := fmt.Sprintf("Response failed with status code: %d and\nbody: %v\n", response.StatusCode, cacheData)
 			return errors.New(err)
 		}
-		c.cache.Add(baseUrl, cacheData)
+		c.cache.Add(pokemon, cacheData)
 	}
 
 	var targetPokemon Pokemon
@@ -259,6 +268,36 @@ func catchThatPokemon(c *config, pokemon string) error {
 		fmt.Println(pokemon + " was caught!")
 	} else {
 		fmt.Println(pokemon + " escaped!")
+	}
+
+	return nil
+}
+
+func inspectPokemon(c *config, pokemon string) error {
+	if pokemon == "" {
+		fmt.Println("specifiy the pokemon with name you want to inspect")
+		return nil
+	}
+
+	pokemonDetails, ok := c.pokemon[pokemon]
+	if !ok {
+		fmt.Println("you have not caught that pokemon")
+		return nil
+	}
+
+	fmt.Printf("ID: %d\n", pokemonDetails.ID)
+	fmt.Printf("Name: %s\n", pokemonDetails.Name)
+	fmt.Printf("Base Experience: %d\n", pokemonDetails.BaseExperience)
+	fmt.Printf("Height: %d\n", pokemonDetails.Height)
+	fmt.Printf("Weight: %d\n", pokemonDetails.Weight)
+	fmt.Println("Stats:")
+	for _, stat := range pokemonDetails.Stats {
+		fmt.Printf("  -%s: %d\n", stat.Stat.Name, stat.BaseStat)
+	}
+
+	fmt.Println("Types:")
+	for _, typ := range pokemonDetails.Types {
+		fmt.Printf("  - %s\n", typ.Type.Name)
 	}
 
 	return nil
